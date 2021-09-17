@@ -161,6 +161,10 @@ var runCmd = &cli.Command{
 			Usage: "remote commit address",
 			Value: "127.0.0.1:8080",
 		},
+		&cli.StringFlag{
+			Name:  "worker-name",
+			Usage: "setting worker name",
+		},
 	},
 	Before: func(cctx *cli.Context) error {
 		if cctx.IsSet("address") {
@@ -209,6 +213,11 @@ var runCmd = &cli.Command{
 			return xerrors.Errorf("setting remote commit address: %s", err.Error())
 		}
 
+		workerName := cctx.String("worker-name")
+		if err := os.Setenv("WORKER_NAME", workerName); err != nil {
+			return xerrors.Errorf("setting worker name error: %s", err.Error())
+		}
+
 		// Register all metric views
 		if err := view.Register(
 			metrics.DefaultViews...,
@@ -220,9 +229,9 @@ var runCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		if v.APIVersion != api.MinerAPIVersion0 {
-			return xerrors.Errorf("lotus-miner API version doesn't match: expected: %s", api.APIVersion{APIVersion: api.MinerAPIVersion0})
-		}
+		//if v.APIVersion != api.MinerAPIVersion0 {
+		//	return xerrors.Errorf("lotus-miner API version doesn't match: expected: %s", api.APIVersion{APIVersion: api.MinerAPIVersion0})
+		//}
 		log.Infof("Remote version %s", v)
 
 		// Check params

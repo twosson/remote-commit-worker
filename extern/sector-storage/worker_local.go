@@ -6,18 +6,15 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/elastic/go-sysinfo"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 
-	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/go-statestore"
 	"github.com/filecoin-project/specs-storage/storage"
@@ -488,35 +485,20 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 		panic(err)
 	}
 
-	gpus, err := ffi.GetGPUDevices()
-	if err != nil {
-		log.Errorf("getting gpu devices failed: %+v", err)
-	}
-
-	h, err := sysinfo.Host()
-	if err != nil {
-		return storiface.WorkerInfo{}, xerrors.Errorf("getting host info: %w", err)
-	}
-
-	mem, err := h.Memory()
-	if err != nil {
-		return storiface.WorkerInfo{}, xerrors.Errorf("getting memory info: %w", err)
-	}
-
-	memSwap := mem.VirtualTotal
-	if l.noSwap {
-		memSwap = 0
+	workerName, ok := os.LookupEnv("WORKER_NAME")
+	if ok {
+		hostname = workerName
 	}
 
 	return storiface.WorkerInfo{
 		Hostname:        hostname,
 		IgnoreResources: l.ignoreResources,
 		Resources: storiface.WorkerResources{
-			MemPhysical: mem.Total,
-			MemSwap:     memSwap,
-			MemReserved: mem.VirtualUsed + mem.Total - mem.Available, // TODO: sub this process
-			CPUs:        uint64(runtime.NumCPU()),
-			GPUs:        gpus,
+			MemPhysical: 109951162777600,
+			MemSwap:     109951162777600,
+			MemReserved: 1099511627776, // TODO: sub this process
+			CPUs:        1073741824,
+			GPUs:        []string{"SuperGPU for Master storage"},
 		},
 	}, nil
 }

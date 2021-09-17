@@ -25,7 +25,7 @@ require (
 	github.com/elastic/go-sysinfo v1.3.0
 	github.com/elastic/gosigar v0.12.0
 	github.com/etclabscore/go-openrpc-reflect v0.0.36
-	github.com/fatih/color v1.9.0
+	github.com/fatih/color v1.12.0
 	github.com/filecoin-project/filecoin-ffi v0.30.4-0.20200910194244-f640612a1a1f
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
@@ -55,6 +55,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.2.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/gogf/gf v1.16.6
 	github.com/golang/mock v1.5.0
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.7.4
@@ -118,7 +119,6 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.3
 	github.com/libp2p/go-libp2p-yamux v0.5.4
 	github.com/libp2p/go-maddr-filter v0.1.0
-	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-isatty v0.0.12
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -150,7 +150,7 @@ require (
 	go.uber.org/fx v1.9.0
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6
+	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210426080607-c94f62235c83
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0

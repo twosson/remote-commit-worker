@@ -24,7 +24,6 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-jsonrpc/auth"
-	paramfetch "github.com/filecoin-project/go-paramfetch"
 	"github.com/filecoin-project/go-statestore"
 
 	"github.com/filecoin-project/lotus/api"
@@ -157,6 +156,11 @@ var runCmd = &cli.Command{
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
 		},
+		&cli.StringFlag{
+			Name:  "remote-commit-address",
+			Usage: "remote commit address",
+			Value: "127.0.0.1:8080",
+		},
 	},
 	Before: func(cctx *cli.Context) error {
 		if cctx.IsSet("address") {
@@ -171,11 +175,11 @@ var runCmd = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		log.Info("Starting lotus worker")
 
-		if !cctx.Bool("enable-gpu-proving") {
-			if err := os.Setenv("BELLMAN_NO_GPU", "true"); err != nil {
-				return xerrors.Errorf("could not set no-gpu env: %+v", err)
-			}
-		}
+		//if !cctx.Bool("enable-gpu-proving") {
+		//	if err := os.Setenv("BELLMAN_NO_GPU", "true"); err != nil {
+		//		return xerrors.Errorf("could not set no-gpu env: %+v", err)
+		//	}
+		//}
 
 		// Connect to storage-miner
 		ctx := lcli.ReqContext(cctx)
@@ -200,6 +204,11 @@ var runCmd = &cli.Command{
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
+		remoteCommitAddress := cctx.String("remote-commit-address")
+		if err := os.Setenv("C2_REMOTE_IP", remoteCommitAddress); err != nil {
+			return xerrors.Errorf("setting remote commit address: %s", err.Error())
+		}
+
 		// Register all metric views
 		if err := view.Register(
 			metrics.DefaultViews...,
@@ -218,40 +227,24 @@ var runCmd = &cli.Command{
 
 		// Check params
 
-		act, err := nodeApi.ActorAddress(ctx)
-		if err != nil {
-			return err
-		}
-		ssize, err := nodeApi.ActorSectorSize(ctx, act)
-		if err != nil {
-			return err
-		}
-
-		if cctx.Bool("commit") {
-			if err := paramfetch.GetParams(ctx, build.ParametersJSON(), build.SrsJSON(), uint64(ssize)); err != nil {
-				return xerrors.Errorf("get params: %w", err)
-			}
-		}
+		//act, err := nodeApi.ActorAddress(ctx)
+		//if err != nil {
+		//	return err
+		//}
+		//ssize, err := nodeApi.ActorSectorSize(ctx, act)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//if cctx.Bool("commit") {
+		//	if err := paramfetch.GetParams(ctx, build.ParametersJSON(), build.SrsJSON(), uint64(ssize)); err != nil {
+		//		return xerrors.Errorf("get params: %w", err)
+		//	}
+		//}
 
 		var taskTypes []sealtasks.TaskType
 
-		taskTypes = append(taskTypes, sealtasks.TTFetch, sealtasks.TTCommit1, sealtasks.TTFinalize)
-
-		if cctx.Bool("addpiece") {
-			taskTypes = append(taskTypes, sealtasks.TTAddPiece)
-		}
-		if cctx.Bool("precommit1") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit1)
-		}
-		if cctx.Bool("unseal") {
-			taskTypes = append(taskTypes, sealtasks.TTUnseal)
-		}
-		if cctx.Bool("precommit2") {
-			taskTypes = append(taskTypes, sealtasks.TTPreCommit2)
-		}
-		if cctx.Bool("commit") {
-			taskTypes = append(taskTypes, sealtasks.TTCommit2)
-		}
+		taskTypes = append(taskTypes, sealtasks.TTFetch, sealtasks.TTCommit1, sealtasks.TTFinalize, sealtasks.TTCommit2)
 
 		if len(taskTypes) == 0 {
 			return xerrors.Errorf("no task types specified")

@@ -5,15 +5,19 @@ package ffiwrapper
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"context"
-	"io"
-	"math/bits"
-	"os"
-	"runtime"
-
+	"encoding/json"
+	"fmt"
 	"github.com/filecoin-project/lotus/extern/sector-storage/partialfile"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
+	"io"
+	"io/ioutil"
+	"math/bits"
+	"net/http"
+	"os"
+	"runtime"
 
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	rlepluslazy "github.com/filecoin-project/go-bitfield/rle"
@@ -578,7 +582,77 @@ func (sb *Sealer) SealCommit1(ctx context.Context, sector storage.SectorRef, tic
 }
 
 func (sb *Sealer) SealCommit2(ctx context.Context, sector storage.SectorRef, phase1Out storage.Commit1Out) (storage.Proof, error) {
-	return ffi.SealCommitPhase2(phase1Out, sector.ID.Number, sector.ID.Miner)
+	type Request struct {
+		SectorID   abi.SectorID
+		Commit1Out storage.Commit1Out
+	}
+	type Response struct {
+		SectorID abi.SectorID
+		Proof    storage.Proof
+	}
+
+	request := Request{}
+
+	request.SectorID = sector.ID
+
+	//c1o, _ := ioutil.ReadFile("c1_result.dat")
+	request.Commit1Out = phase1Out
+
+	b, err := json.Marshal(request)
+	if err != nil {
+		log.Errorf("json format error: %s", err.Error())
+		return storage.Proof{}, err
+	}
+
+	zBuf := new(bytes.Buffer)
+	zw := gzip.NewWriter(zBuf)
+	if _, err = zw.Write(b); err != nil {
+		log.Errorf("gzip is failed, %s", err.Error())
+		return storage.Proof{}, err
+	}
+
+	zw.Flush()
+	zw.Close()
+
+	remoteIp := os.Getenv("C2_REMOTE_IP")
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/remote/seal/commit2", remoteIp), zBuf)
+	if err != nil {
+		log.Errorf("request remote c2 err: %s", err.Error())
+		return storage.Proof{}, err
+	}
+
+	req.Header.Set("Content-Type", "application/json;charset=utf-8")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Errorf("response remote c2 err: %s", err.Error())
+		return storage.Proof{}, err
+	}
+
+	if resp.StatusCode != 200 {
+		log.Warnf("http client do code: %d err: %s", resp.StatusCode, err.Error())
+		return storage.Proof{}, err
+	}
+	defer resp.Body.Close()
+
+	result, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("ioutil read all err: %s", err.Error())
+		return storage.Proof{}, err
+	}
+
+	response := Response{}
+	err = json.Unmarshal(result, &response)
+	if err != nil {
+		log.Errorf("json format len: %d error: %s", len(result), err.Error())
+		return storage.Proof{}, err
+	}
+
+	log.Infof("remote c2 result: %v", response)
+	return response.Proof, nil
+	//return ffi.SealCommitPhase2(phase1Out, sector.ID.Number, sector.ID.Miner)
 }
 
 func (sb *Sealer) FinalizeSector(ctx context.Context, sector storage.SectorRef, keepUnsealed []storage.Range) error {
